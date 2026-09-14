@@ -27,7 +27,7 @@ from telegram import (
     InputTextMessageContent,
     Update,
 )
-from telegram.constants import ParseMode
+from telegram.constants import ChatAction, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import (
     Application,
@@ -38,6 +38,8 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+
+from ai_agent import AIServiceError, ask_deepseek, is_ai_enabled
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -139,6 +141,24 @@ def connect_db():
         ON broker_follows (active, broker_id)
         """
     )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_time TEXT NOT NULL,
+            telegram_user_id INTEGER NOT NULL,
+            chat_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation
+        ON ai_messages (telegram_user_id, chat_id, id)
+        """
+    )
     connection.commit()
     return connection
 
@@ -149,6 +169,7 @@ DB = connect_db()
 def cleanup_old_events():
     cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)
     DB.execute("DELETE FROM events WHERE event_time < ?", (cutoff.isoformat(),))
+    DB.execute("DELETE FROM ai_messages WHERE event_time < ?", (cutoff.isoformat(),))
     DB.commit()
 
 
@@ -731,6 +752,197 @@ def candidate_buttons(records):
     return InlineKeyboardMarkup(rows)
 
 
+
+def ai_history(user_id: int, chat_id: int):
+    rows = DB.execute(
+        """
+        SELECT role, content FROM ai_messages
+        WHERE telegram_user_id = ? AND chat_id = ?
+        ORDER BY id DESC LIMIT 8
+        """,
+        (user_id, chat_id),
+    ).fetchall()
+    return [
+        {"role": row["role"], "content": row["content"]}
+        for row in reversed(rows)
+        if row["role"] in {"user", "assistant"}
+    ]
+
+
+def save_ai_message(user_id: int, chat_id: int, role: str, content: str):
+    DB.execute(
+        """
+        INSERT INTO ai_messages (
+            event_time, telegram_user_id, chat_id, role, content
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            datetime.now(timezone.utc).isoformat(),
+            user_id,
+            chat_id,
+            role,
+            content[:4000],
+        ),
+    )
+    DB.commit()
+
+
+def broker_tool_record(broker):
+    return {
+        "broker_id": str(broker.get("broker_id") or ""),
+        "name": text_value(broker.get("broker_name")),
+        "company_name": text_value(broker.get("full_name")),
+        "country_or_region": text_value(broker.get("country")),
+        "official_websites": list(broker.get("domains_list") or []),
+        "licence_numbers": list(broker.get("licenses_list") or []),
+        "regulation_summary": text_value(
+            broker.get("regulatory_summary") or broker.get("regulation_status")
+        ),
+        "risk_warning": text_value(
+            broker.get("regulatory_warning") or broker.get("risk_summary")
+        ),
+        "wikifx_score": text_value(broker.get("score")),
+        "risk_grade": text_value(broker.get("risk_grade")),
+        "data_updated_at": text_value(broker.get("source_checked_at")),
+        "wikifx_profile_url": text_value(broker.get("wikifx_url")),
+        "app_url": text_value(broker.get("app_download_url")) or WIKIFX_APP_ONELINK,
+    }
+
+
+async def execute_ai_tool(name: str, arguments: dict, update: Update):
+    if name == "search_brokers":
+        query = text_value(arguments.get("query"))[:200]
+        records, match_type = find_brokers(query)
+        return {
+            "ok": True,
+            "query": query,
+            "match_type": match_type,
+            "result_count": len(records),
+            "results": [broker_tool_record(record) for record in records],
+        }
+
+    if name == "list_my_follows":
+        if not update.effective_chat or update.effective_chat.type != "private":
+            return {
+                "ok": False,
+                "error": "Follow management is available only in the bot's private chat.",
+            }
+        records = []
+        for follow in active_follows(update.effective_user.id)[:10]:
+            matches, _ = find_brokers(follow["broker_id"])
+            if matches:
+                records.append(broker_tool_record(matches[0]))
+        return {"ok": True, "result_count": len(records), "results": records}
+
+    if name == "set_broker_follow":
+        if not update.effective_chat or update.effective_chat.type != "private":
+            return {
+                "ok": False,
+                "error": "Follow management is available only in the bot's private chat.",
+            }
+        requested_id = broker_id_value(arguments.get("broker_id"))
+        action = text_value(arguments.get("action")).casefold()
+        records, _ = find_brokers(requested_id)
+        broker = next(
+            (record for record in records if record["broker_id"] == requested_id),
+            None,
+        )
+        if not broker:
+            return {"ok": False, "error": "No exact broker was found for that WikiFX ID."}
+        if action not in {"follow", "unfollow"}:
+            return {"ok": False, "error": "Action must be follow or unfollow."}
+
+        enabled = action == "follow"
+        save_follow(
+            update.effective_user.id,
+            update.effective_chat.id,
+            broker["broker_id"],
+            enabled,
+        )
+        log_event(
+            update,
+            "follow_enabled" if enabled else "follow_disabled",
+            broker_id=broker["broker_id"],
+        )
+        return {
+            "ok": True,
+            "action": action,
+            "broker": broker_tool_record(broker),
+        }
+
+    return {"ok": False, "error": f"Unknown tool: {name}"}
+
+
+def natural_language_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    if not message or not message.text or not update.effective_chat:
+        return ""
+
+    text = message.text.strip()
+    if update.effective_chat.type == "private":
+        return text
+
+    username = context.bot.username or ""
+    mention_pattern = rf"@{re.escape(username)}\b" if username else ""
+    mentioned = bool(mention_pattern and re.search(mention_pattern, text, re.IGNORECASE))
+    replied_to_bot = bool(
+        message.reply_to_message
+        and message.reply_to_message.from_user
+        and message.reply_to_message.from_user.id == context.bot.id
+    )
+    if not mentioned and not replied_to_bot:
+        return ""
+    if mentioned:
+        text = re.sub(mention_pattern, "", text, flags=re.IGNORECASE)
+    return text.strip(" ,，:：")
+
+
+async def ai_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    prompt = natural_language_prompt(update, context)
+    if not prompt:
+        return
+
+    if not is_ai_enabled():
+        await update.effective_message.reply_text(
+            "AI service is not configured yet. Use /check <broker name> for the current lookup."
+        )
+        return
+
+    user = update.effective_user
+    chat = update.effective_chat
+    if not user or not chat:
+        return
+
+    try:
+        await context.bot.send_chat_action(chat_id=chat.id, action=ChatAction.TYPING)
+    except TelegramError:
+        pass
+
+    previous_messages = ai_history(user.id, chat.id)
+    log_event(update, "ai_query", query_text=prompt[:1000])
+
+    try:
+        answer = await ask_deepseek(
+            prompt,
+            previous_messages,
+            lambda name, args: execute_ai_tool(name, args, update),
+        )
+    except AIServiceError:
+        LOGGER.exception("DeepSeek assistant request failed")
+        await update.effective_message.reply_text(
+            "The AI assistant is temporarily unavailable. You can still use /check <broker name>."
+        )
+        return
+
+    save_ai_message(user.id, chat.id, "user", prompt)
+    save_ai_message(user.id, chat.id, "assistant", answer)
+    log_event(update, "ai_response")
+    await update.effective_message.reply_text(
+        answer[:4000],
+        disable_web_page_preview=True,
+    )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_event(update, "bot_start")
 
@@ -854,17 +1066,22 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await process_broker_query(update, query_text)
 
 
-async def check_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     replied_to = message.reply_to_message if message else None
-    if not replied_to or not replied_to.from_user:
-        return
-    if replied_to.from_user.id != context.bot.id or replied_to.text != CHECK_PROMPT:
+    is_check_reply = bool(
+        replied_to
+        and replied_to.from_user
+        and replied_to.from_user.id == context.bot.id
+        and replied_to.text == CHECK_PROMPT
+    )
+    if is_check_reply:
+        query_text = message.text.strip()
+        if query_text:
+            await process_broker_query(update, query_text)
         return
 
-    query_text = message.text.strip()
-    if query_text:
-        await process_broker_query(update, query_text)
+    await ai_text_message(update, context)
 
 
 async def candidate_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1449,6 +1666,10 @@ def main():
     cleanup_old_events()
     LOGGER.info("Using workbook: %s", XLSX_PATH)
     LOGGER.info("Loaded %s active WikiFX brokers", len(load_brokers()))
+    LOGGER.info(
+        "DeepSeek AI layer: %s",
+        "enabled" if is_ai_enabled() else "disabled (missing DEEPSEEK_API_KEY)",
+    )
 
     application = (
         Application.builder()
@@ -1470,7 +1691,7 @@ def main():
     application.add_handler(CommandHandler("delete", delete))
     application.add_handler(CommandHandler("mute", mute))
     application.add_handler(CommandHandler("unmute", unmute))
-    application.add_handler(MessageHandler(filters.TEXT & filters.REPLY & ~filters.COMMAND, check_reply))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message))
     application.add_handler(CallbackQueryHandler(candidate_selected, pattern=r"^broker:"))
     application.add_handler(
         CallbackQueryHandler(follow_selected, pattern=r"^(follow|unfollow):")

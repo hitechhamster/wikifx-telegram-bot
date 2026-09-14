@@ -19,6 +19,7 @@
 6. Render 提示填写 Secret 时：
    - `TELEGRAM_BOT_TOKEN`：在 BotFather 轮换后得到的新 Token。
    - `TELEGRAM_ADMIN_IDS`：一个或多个数字 ID，多个值使用英文逗号分隔。
+   - `DEEPSEEK_API_KEY`：DeepSeek API 平台创建的密钥，只填写到 Render Secret。
 7. 确认费用后创建服务。Blueprint 会创建一个 Background Worker 和一个 1 GB 持久磁盘。
 
 ## 首次启动检查
@@ -70,3 +71,8 @@ SQLite 数据库保存到 `/data/telegram_mvp.db`，该路径由 Render 持久�
 ## 迁移到公司服务器
 
 公司服务器准备好后，可继续使用仓库中的 `Dockerfile`。将 `/data` 挂载为持久目录，并通过服务器 Secret 或受限环境文件注入同名环境变量。切换时先停止 Render Worker，再启动公司服务器，避免两个实例同时长轮询同一个 Bot Token。
+
+
+## DeepSeek AI 层
+
+自然语言消息由 `deepseek-flash`（当前指向 DeepSeek V4.1 Flash）处理，默认关闭思考模式。模型只能通过本地工具读取交易商工作簿、查看关注列表，并在用户明确要求时关注或取消关注交易商。管理员新闻推送和群管理命令不开放给 AI。

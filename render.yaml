@@ -11,6 +11,16 @@ services:
         sync: false
       - key: TELEGRAM_ADMIN_IDS
         sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-flash
+      - key: DEEPSEEK_THINKING
+        value: disabled
+      - key: DEEPSEEK_TIMEOUT_SECONDS
+        value: "30"
+      - key: AI_MAX_TOKENS
+        value: "700"
       - key: BOT_MARKET
         value: India
       - key: SOURCE_TAG

@@ -18,3 +18,8 @@
 - 不提交 Telegram 本地数据库和事件明细导出，避免用户行为数据进入 Git 历史。
 - `config.example.env` 只保留占位符；真实配置仅在本机或部署平台的 Secret 中维护。
 
+
+
+## Telegram AI assistant
+
+The Telegram bot supports natural-language broker questions through DeepSeek V4.1 Flash. Broker facts are retrieved from the local WikiFX workbook through constrained tools; the model is instructed not to invent regulation, risk, website, score, or safety claims. Set `DEEPSEEK_API_KEY` only in the deployment platform's secret manager.
