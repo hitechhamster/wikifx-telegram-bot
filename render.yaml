@@ -6,7 +6,6 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     numInstances: 1
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
