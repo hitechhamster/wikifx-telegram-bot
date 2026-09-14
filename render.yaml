@@ -1,0 +1,34 @@
+services:
+  - type: worker
+    name: wikifx-broker-check-india-bot
+    runtime: docker
+    plan: 0.5c-512mb
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    numInstances: 1
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ADMIN_IDS
+        sync: false
+      - key: BOT_MARKET
+        value: India
+      - key: SOURCE_TAG
+        value: india_own_group_mvp
+      - key: RETENTION_DAYS
+        value: "30"
+      - key: RECALL_AFTER_DAYS
+        value: "3"
+      - key: RECALL_REPEAT_DAYS
+        value: "7"
+      - key: RECALL_CHECK_SECONDS
+        value: "21600"
+      - key: BOT_DB_PATH
+        value: /data/telegram_mvp.db
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    disk:
+      name: telegram-data
+      mountPath: /data
+      sizeGB: 1

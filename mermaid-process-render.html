@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>自然北极星私域运营闭环</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #172033;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    #export-area {
+      display: inline-block;
+      min-width: 2400px;
+      padding: 56px 64px 64px;
+      background: #ffffff;
+    }
+    h1 {
+      margin: 0 0 12px;
+      text-align: center;
+      font-size: 40px;
+      font-weight: 700;
+      color: #172033;
+    }
+    .subtitle {
+      margin: 0 0 34px;
+      text-align: center;
+      font-size: 20px;
+      color: #657087;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      width: max-content;
+      min-width: 100%;
+    }
+    .mermaid svg {
+      display: block;
+      max-width: none !important;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <main id="export-area">
+    <h1>自然北极星私域运营闭环</h1>
+    <p class="subtitle">用户来源 → 运营触发 → 私域承接 → 首次深访 → 持续召回 → 每日新增100深访</p>
+    <div class="mermaid">
+flowchart LR
+    subgraph A["① 用户来源"]
+        A1["WikiFX现有用户<br/>搜索/详情/投诉/客服"]
+        A2["内容用户<br/>文章/SEO/新闻/视频"]
+        A3["外部用户<br/>官方社媒/KOL/投广"]
+    end
+
+    subgraph B["② 运营触发"]
+        B1["查交易商<br/>CHECK + Broker"]
+        B2["持续观察<br/>WATCH + Broker"]
+        B3["投诉跟进<br/>CASE + Broker"]
+    end
+
+    subgraph C["③ 私域承接"]
+        C1["国家观察频道<br/>印度/巴基斯坦/印尼"]
+        C2["官方Business私聊"]
+        C3["用户标签<br/>国家+交易商+来源+需求"]
+    end
+
+    subgraph D["④ 首次深度访问"]
+        D1["发送查询结果"]
+        D2["精确跳转APP<br/>交易商详情/风险/投诉"]
+        D3["未安装用户<br/>WEB承接或引导APP"]
+    end
+
+    subgraph E["⑤ 持续召回"]
+        E1["监管或牌照变化"]
+        E2["评分/风险变化"]
+        E3["投诉案件进展"]
+        E4["热点交易商事件"]
+    end
+
+    subgraph F["⑥ 北极星结果"]
+        F1["再次打开APP深度页面"]
+        F2["APP新增深访 75/日"]
+        F3["WEB新增深访 25/日"]
+        F4["合计新增深访 100/日"]
+    end
+
+    A1 --> B1
+    A1 --> B3
+    A2 --> B1
+    A2 --> B2
+    A3 --> B1
+    A3 --> B2
+
+    B1 --> C2
+    B2 --> C1
+    B3 --> C2
+    C1 --> C3
+    C2 --> C3
+
+    C3 --> D1
+    D1 --> D2
+    D1 --> D3
+
+    D2 --> E1
+    D2 --> E2
+    D2 --> E3
+    D2 --> E4
+
+    E1 --> F1
+    E2 --> F1
+    E3 --> F1
+    E4 --> F1
+
+    F1 --> F2
+    D3 --> F3
+    F2 --> F4
+    F3 --> F4
+
+    classDef source fill:#FFF3E8,stroke:#F58220,color:#172033,stroke-width:2px;
+    classDef trigger fill:#EAF1FF,stroke:#2563EB,color:#172033,stroke-width:2px;
+    classDef pool fill:#F0ECFF,stroke:#7756D8,color:#172033,stroke-width:2px;
+    classDef visit fill:#E9F8F2,stroke:#159467,color:#172033,stroke-width:2px;
+    classDef recall fill:#FFF3E8,stroke:#F58220,color:#172033,stroke-width:2px;
+    classDef result fill:#FDECEC,stroke:#DC4C4C,color:#172033,stroke-width:2px;
+
+    class A1,A2,A3 source;
+    class B1,B2,B3 trigger;
+    class C1,C2,C3 pool;
+    class D1,D2,D3 visit;
+    class E1,E2,E3,E4 recall;
+    class F1,F2,F3,F4 result;
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      securityLevel: "loose",
+      themeVariables: {
+        fontFamily: "Microsoft YaHei, PingFang SC, Arial, sans-serif",
+        fontSize: "20px",
+        primaryTextColor: "#172033",
+        lineColor: "#8792A7",
+        clusterBkg: "#FAFBFD",
+        clusterBorder: "#DCE2EC"
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: "basis",
+        nodeSpacing: 42,
+        rankSpacing: 72,
+        useMaxWidth: false
+      }
+    });
+  </script>
+</body>
+</html>

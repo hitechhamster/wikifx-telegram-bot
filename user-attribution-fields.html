@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>用户归因数据字段</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #172033;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    #export-area {
+      display: inline-block;
+      width: 2400px;
+      padding: 64px 72px 72px;
+      background: #ffffff;
+    }
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 46px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      margin: 14px 0 44px;
+      color: #657087;
+      text-align: center;
+      font-size: 24px;
+    }
+    .groups {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr 1.12fr 1.36fr;
+      gap: 32px;
+      align-items: stretch;
+    }
+    .group {
+      position: relative;
+      padding: 28px;
+      border: 2px solid #dce2ec;
+      border-top-width: 8px;
+      border-radius: 18px;
+      background: #fbfcfe;
+    }
+    .group:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      right: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      color: #8c97aa;
+      font-size: 38px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .identity { border-top-color: #f58220; }
+    .source { border-top-color: #2563eb; }
+    .intent { border-top-color: #7756d8; }
+    .behavior { border-top-color: #159467; }
+    .group-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .step {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 21px;
+    }
+    .identity .step { background: #f58220; }
+    .source .step { background: #2563eb; }
+    .intent .step { background: #7756d8; }
+    .behavior .step { background: #159467; }
+    .fields {
+      display: grid;
+      gap: 14px;
+    }
+    .field {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 16px;
+      border: 2px solid #dce2ec;
+      border-radius: 12px;
+      background: #ffffff;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .identity .field { border-color: #f3c39c; }
+    .source .field { border-color: #b9cdf8; }
+    .intent .field { border-color: #cdbff5; }
+    .behavior .field { border-color: #a7ddc9; }
+    .result {
+      margin-top: 38px;
+      padding: 22px 28px;
+      border-left: 8px solid #f58220;
+      border-radius: 12px;
+      background: #fff4ea;
+      color: #81400d;
+      font-size: 25px;
+      font-weight: 700;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main id="export-area">
+    <h1>用户归因数据字段</h1>
+    <p class="subtitle">识别用户是谁、从哪里来、关注什么，以及是否真正产生首次和重复深访</p>
+
+    <section class="groups" aria-label="用户归因数据字段分组">
+      <article class="group identity">
+        <div class="group-title"><span class="step">1</span>身份与区域</div>
+        <div class="fields">
+          <div class="field">用户ID / 联系方式</div>
+          <div class="field">国家</div>
+          <div class="field">语言</div>
+        </div>
+      </article>
+
+      <article class="group source">
+        <div class="group-title"><span class="step">2</span>来源归因</div>
+        <div class="fields">
+          <div class="field">来源渠道</div>
+          <div class="field">来源编号</div>
+        </div>
+      </article>
+
+      <article class="group intent">
+        <div class="group-title"><span class="step">3</span>关注对象与需求</div>
+        <div class="fields">
+          <div class="field">交易商</div>
+          <div class="field">CHECK / WATCH / CASE</div>
+        </div>
+      </article>
+
+      <article class="group behavior">
+        <div class="group-title"><span class="step">4</span>深访行为时间</div>
+        <div class="fields">
+          <div class="field">入池时间</div>
+          <div class="field">首次深访时间</div>
+          <div class="field">重复深访时间</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="result">最终形成完整归因链路：来源 → 入池 → 首次深访 → 再次召回 → 重复深访</div>
+  </main>
+</body>
+</html>
