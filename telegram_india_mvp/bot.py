@@ -257,7 +257,7 @@ def welcome_text():
         "1. Tap <b>Check a broker</b>.\n"
         "2. Send a broker name, official website or WikiFX ID.\n"
         "3. Tap <b>Follow updates</b> on the result card to receive future news and reminders.\n\n"
-        "<i>Information only. Not investment advice.</i>"
+        "<i>Powered by WikiFX broker data and risk intelligence.</i>"
     )
 
 
@@ -639,7 +639,7 @@ def broker_card(broker):
         "with your account-opening email or client agreement.",
         "",
         "Tap below for the full WikiFX profile and latest evidence.",
-        "<i>Information only. Not investment advice.</i>",
+        "<i>Powered by WikiFX broker data and risk intelligence.</i>",
     ]
     return "\n".join(lines)
 
@@ -934,6 +934,7 @@ async def ai_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    answer = answer.replace("**", "").replace("```", "").strip()
     save_ai_message(user.id, chat.id, "user", prompt)
     save_ai_message(user.id, chat.id, "assistant", answer)
     log_event(update, "ai_response")
