@@ -897,6 +897,22 @@ def natural_language_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return text.strip(" ,，:：")
 
 
+def append_app_download_cta(prompt: str, answer: str):
+    if WIKIFX_APP_ONELINK in answer:
+        return answer
+    if re.search(r"[\u4e00-\u9fff]", prompt):
+        cta = (
+            "📲 下载 WikiFX App，查看完整交易商资料并持续获取风险动态："
+            f"{WIKIFX_APP_ONELINK}"
+        )
+    else:
+        cta = (
+            "📲 Download the WikiFX App for full broker details and ongoing risk updates: "
+            f"{WIKIFX_APP_ONELINK}"
+        )
+    return f"{answer.rstrip()}\n\n{cta}"
+
+
 async def ai_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prompt = natural_language_prompt(update, context)
     if not prompt:
@@ -935,6 +951,7 @@ async def ai_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     answer = answer.replace("**", "").replace("```", "").strip()
+    answer = append_app_download_cta(prompt, answer)
     save_ai_message(user.id, chat.id, "user", prompt)
     save_ai_message(user.id, chat.id, "assistant", answer)
     log_event(update, "ai_response")
